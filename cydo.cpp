@@ -21,6 +21,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <dlfcn.h>
 
 #include <errno.h>
 #include <sysexits.h>
@@ -38,6 +39,25 @@ void launch_data_dict_iterate(launch_data_t data, LaunchDataIterator code) {
     launch_data_dict_iterate(data, [](launch_data_t value, const char *name, void *baton) {
         (*static_cast<LaunchDataIterator *>(baton))(name, value);
     }, &code);
+}
+
+void patch_setuid() {
+    void* handle = dlopen("/usr/lib/libjailbreak.dylib", RTLD_LAZY);
+    if (!handle) return;
+
+    // Reset errors
+    dlerror();
+    typedef void (*fix_setuid_prt_t)(pid_t pid);
+    fix_setuid_prt_t ptr = (fix_setuid_prt_t)dlsym(handle, "jb_oneshot_fix_setuid_now");
+    
+    const char *dlsym_error = dlerror();
+    if (dlsym_error) {
+        dlclose(handle);
+        return;
+    }
+
+    ptr(getpid());
+    dlclose(handle);
 }
 
 int main(int argc, char *argv[]) {
@@ -112,7 +132,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "none shall pass\n");
         return EX_NOPERM;
     }
-
+    
+    patch_setuid();
     setuid(0);
     setgid(0);
 

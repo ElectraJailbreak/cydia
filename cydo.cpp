@@ -43,7 +43,8 @@ void launch_data_dict_iterate(launch_data_t data, LaunchDataIterator code) {
 
 void patch_setuid() {
     void* handle = dlopen("/usr/lib/libjailbreak.dylib", RTLD_LAZY);
-    if (!handle) return;
+    if (!handle) 
+        return;
 
     // Reset errors
     dlerror();
@@ -51,13 +52,10 @@ void patch_setuid() {
     fix_setuid_prt_t ptr = (fix_setuid_prt_t)dlsym(handle, "jb_oneshot_fix_setuid_now");
     
     const char *dlsym_error = dlerror();
-    if (dlsym_error) {
-        dlclose(handle);
+    if (dlsym_error) 
         return;
-    }
 
     ptr(getpid());
-    dlclose(handle);
 }
 
 int main(int argc, char *argv[]) {

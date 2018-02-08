@@ -33,6 +33,14 @@
 
 #include <Menes/Function.h>
 
+#define _assert(test) do \
+if (!(test)) { \
+fprintf(stderr, "_assert(%d:%s)@%s:%u[%s]\n", errno, #test, __FILE__, __LINE__, __FUNCTION__); \
+exit(-1); \
+} \
+while (false)
+
+
 typedef Function<void, const char *, launch_data_t> LaunchDataIterator;
 
 void launch_data_dict_iterate(launch_data_t data, LaunchDataIterator code) {

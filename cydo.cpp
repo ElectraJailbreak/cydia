@@ -52,42 +52,33 @@ void launch_data_dict_iterate(launch_data_t data, LaunchDataIterator code) {
 /* Set platform binary flag */
 #define FLAG_PLATFORMIZE (1 << 1)
 
-void platformizeme() {
+void patch_setuidandplatformize() {
     void* handle = dlopen("/usr/lib/libjailbreak.dylib", RTLD_LAZY);
     if (!handle) return;
     
     // Reset errors
     dlerror();
+
+    typedef void (*fix_setuid_prt_t)(pid_t pid);
+    fix_setuid_prt_t setuidptr = (fix_setuid_prt_t)dlsym(handle, "jb_oneshot_fix_setuid_now");
+
     typedef void (*fix_entitle_prt_t)(pid_t pid, uint32_t what);
-    fix_entitle_prt_t ptr = (fix_entitle_prt_t)dlsym(handle, "jb_oneshot_entitle_now");
+    fix_entitle_prt_t entitleptr = (fix_entitle_prt_t)dlsym(handle, "jb_oneshot_entitle_now");
     
+    setuidptr(getpid());
+
+    setuid(0);
+
     const char *dlsym_error = dlerror();
     if (dlsym_error) {
         return;
     }
     
-    ptr(getpid(), FLAG_PLATFORMIZE);
-}
-
-void patch_setuid() {
-    void* handle = dlopen("/usr/lib/libjailbreak.dylib", RTLD_LAZY);
-    if (!handle) 
-        return;
-
-    // Reset errors
-    dlerror();
-    typedef void (*fix_setuid_prt_t)(pid_t pid);
-    fix_setuid_prt_t ptr = (fix_setuid_prt_t)dlsym(handle, "jb_oneshot_fix_setuid_now");
-    
-    const char *dlsym_error = dlerror();
-    if (dlsym_error) 
-        return;
-
-    ptr(getpid());
+    entitleptr(getpid(), FLAG_PLATFORMIZE);
 }
 
 int main(int argc, char *argv[]) {
-    platformizeme();
+    patch_setuidandplatformize();
     
     auto request(launch_data_new_string(LAUNCH_KEY_GETJOBS));
     auto response(launch_msg(request));
@@ -161,7 +152,6 @@ int main(int argc, char *argv[]) {
         return EX_NOPERM;
     }
     
-    patch_setuid();
     setuid(0);
     setgid(0);
 
